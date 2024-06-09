@@ -14,7 +14,8 @@ I think I was able to gather evidence that LIME is not effective in this scenari
 
 ## How to run
 
+I used Python 3.10.
 In order to run the code, you need to install all the required packages:
 ```
-python3 -m pip install -r requirements.txt
+pip install -r requirements.txt
 ```

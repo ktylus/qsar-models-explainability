@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 from sklearn.tree import DecisionTreeRegressor, plot_tree
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw
-from IPython.core.display import display, HTML
 
 
 def save_decision_tree_graph(model: DecisionTreeRegressor, filename: str):
@@ -44,8 +43,3 @@ def draw_morgan_bit_many_molecules(molecules: list, bit_id, radius=2, length=102
         ax[i // 5, i % 5].imshow(img)
         ax[i // 5, i % 5].axis('off')
         ax[i // 5, i % 5].set_title(f'bit {i}')
-
-
-def display_lime_explanation(explanation):
-    explanation.save_to_file("lime/ex.html")
-    display(HTML('<iframe src=lime/ex.html width=900 style="background: #FFFFFF;" height=400></iframe>'))
