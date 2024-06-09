@@ -9,7 +9,7 @@ import matplotlib
 import matplotlib.cm as cm
 from skimage.io import imread
 import os
-# a way to make it work on Windows
+# a way to make it work on Windows, it's very bad, and I had to install UniConvertor
 os.environ["path"] += r";C:\\Program Files\\UniConvertor-2.0rc5\dlls"
 from cairosvg import svg2png
 
