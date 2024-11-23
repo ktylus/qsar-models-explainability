@@ -1,4 +1,9 @@
-from torch_geometric.nn import GCNConv, global_mean_pool
+from torch_geometric.nn import (
+    GCNConv,
+    global_mean_pool,
+    global_max_pool,
+    global_add_pool,
+)
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,9 +21,9 @@ class GraphConvolutionalNetwork(nn.Module):
             [GCNConv(hidden_size, hidden_size)] * (n_layers - 1)
         )
         self.linear = nn.Sequential(
-            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(3 * hidden_size, 3 * hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
+            nn.Linear(3 * hidden_size, hidden_size),
             nn.ReLU(),
             nn.Linear(hidden_size, 1)
         )
@@ -43,7 +48,11 @@ class GraphConvolutionalNetwork(nn.Module):
             self.final_conv_activations = last_conv(h, edge_index)
         self.final_conv_activations.register_hook(self.activation_hook)
         h = F.relu(self.final_conv_activations)
-        h = global_mean_pool(h, batch)
+
+        pool1 = global_mean_pool(h, batch)
+        pool2 = global_max_pool(h, batch)
+        pool3 = global_add_pool(h, batch)
+        h = torch.cat([pool1, pool2, pool3], dim=1)
         h = self.linear(h)
         h = nn.Sigmoid()(h)
         return h
