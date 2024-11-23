@@ -12,7 +12,7 @@ class GraphConvolutionalNetwork(nn.Module):
         super(GraphConvolutionalNetwork, self).__init__()
 
         self.gcn = nn.ModuleList(
-            [GCNConv(input_dim, hidden_size)] + 
+            [GCNConv(input_dim, hidden_size)] +
             [GCNConv(hidden_size, hidden_size)] * (n_layers - 1)
         )
         self.linear = nn.Sequential(
@@ -20,52 +20,55 @@ class GraphConvolutionalNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, 1),
+            nn.Linear(hidden_size, 1)
         )
 
+        self.input = None
         self.final_conv_activations = None
         self.final_conv_grads = None
-        
+
     def activation_hook(self, grad):
         self.final_conv_grads = grad.detach().clone()
 
-    def forward(self, x, edge_index, batch=None):
-        if batch is None:
-            batch = torch.zeros(x.shape[0], dtype=torch.long).to(device)
-        
+    def forward(self, data):
+        x, edge_index, batch = data.x, data.edge_index, data.batch
+        self.input = x
+        x.requires_grad = True
+        h = x.clone()
         for conv in self.gcn[:-1]:
-                x = conv(x, edge_index)
-                x = F.relu(x)
+            h = conv(h, edge_index)
+            h = F.relu(h)
         last_conv = self.gcn[-1]
         with torch.enable_grad():
-            self.final_conv_activations = last_conv(x, edge_index)
+            self.final_conv_activations = last_conv(h, edge_index)
         self.final_conv_activations.register_hook(self.activation_hook)
-        x = F.relu(self.final_conv_activations)
-        x = global_mean_pool(x, batch)
-        x = self.linear(x)
-        return x
-    
+        h = F.relu(self.final_conv_activations)
+        h = global_mean_pool(h, batch)
+        h = self.linear(h)
+        h = nn.Sigmoid()(h)
+        return h
+
     def train_model(self, train_loader, test_loader, epochs=10, lr=0.001, early_stopping=None):
         optimizer = torch.optim.Adam(self.parameters(), lr=lr)
         for epoch in range(epochs):
+            self.train()
             train_loss = 0.0
             for batch in train_loader:
-                batch.x, batch.y = batch.x.to(device), batch.y.to(device)
-                batch.edge_index, batch.batch = batch.edge_index.to(device), batch.batch.to(device)
+                batch = batch.to(device)
                 optimizer.zero_grad()
-                output = self(batch.x, batch.edge_index, batch.batch)
-                loss = F.mse_loss(output.squeeze(), batch.y)
+                output = self(batch)
+                loss = F.binary_cross_entropy(output.squeeze(), batch.y)
                 loss.backward()
                 optimizer.step()
                 train_loss += loss.item()
             train_loss /= len(train_loader)
             with torch.no_grad():
+                self.eval()
                 test_loss = 0.0
                 for batch in test_loader:
-                    batch.x, batch.y = batch.x.to(device), batch.y.to(device)
-                    batch.edge_index, batch.batch = batch.edge_index.to(device), batch.batch.to(device)
-                    output = self(batch.x, batch.edge_index, batch.batch)
-                    loss = F.mse_loss(output.squeeze(), batch.y)
+                    batch = batch.to(device)
+                    output = self(batch)
+                    loss = F.binary_cross_entropy(output.squeeze(), batch.y)
                     test_loss += loss.item()
                 test_loss /= len(test_loader)
                 print(f'Epoch: {epoch}, train loss: {train_loss:.4f}, test loss: {test_loss:.4f}')
