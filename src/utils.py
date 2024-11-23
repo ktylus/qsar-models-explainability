@@ -42,4 +42,11 @@ def draw_morgan_bit_many_molecules(molecules: list, bit_id, radius=2, length=102
     for i, img in enumerate(imgs[:10]):
         ax[i // 5, i % 5].imshow(img)
         ax[i // 5, i % 5].axis('off')
-        ax[i // 5, i % 5].set_title(f'bit {i}')
+        ax[i // 5, i % 5].set_title(f'mol {i}')
+
+
+def load_synthetic_target_data():
+    with open("data/ChEMBL_filtered.txt", "r") as f:
+        smiles = f.readlines()
+    molecules = [Chem.MolFromSmiles(smi) for smi in smiles]
+    return molecules

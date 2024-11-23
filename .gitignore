@@ -1,0 +1,7 @@
+openai
+models
+.idea
+catboost_info
+data
+sandbox.ipynb
+*.cfg

@@ -16,6 +16,7 @@ from cairosvg import svg2png
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 # from https://github.com/ndey96/GCNN-Explainability/blob/master/explain.py
 def img_for_mol(mol, atom_weights):
     highlight_kwargs = {}
@@ -49,11 +50,9 @@ def img_for_mol(mol, atom_weights):
 # from https://github.com/ndey96/GCNN-Explainability/blob/master/explain.py
 def grad_cam(model, featurized_mol):
     model.train()
-    x = featurized_mol.x.to(device)
-    y = featurized_mol.y.to(device)
-    edge_index = featurized_mol.edge_index.to(device)
-    output = model(x, edge_index)
-    loss = F.mse_loss(output, y)
+    featurized_mol = featurized_mol.to(device)
+    output = model(featurized_mol)
+    loss = F.binary_cross_entropy(output, featurized_mol.y.reshape(-1, 1))
     loss.backward()
     node_heat_map = []
     alphas = torch.mean(model.final_conv_grads, axis=0)
@@ -67,3 +66,25 @@ def plot_grad_cam_explanation(model, mol, featurized_mol):
     grad_cam_weights = grad_cam(model, featurized_mol)
     scaled_grad_cam_weights = MinMaxScaler().fit_transform(grad_cam_weights.reshape(-1, 1)).squeeze()
     plt.imshow(img_for_mol(mol, scaled_grad_cam_weights))
+
+
+# from https://github.com/ndey96/GCNN-Explainability/blob/master/explain.py
+def saliency_map(model, featurized_mol):
+    model.train()
+    featurized_mol = featurized_mol.to(device)
+    output = model(featurized_mol)
+    loss = F.binary_cross_entropy(output, featurized_mol.y.reshape(-1, 1))
+    loss.backward()
+    input_grads = model.input.grad
+    node_saliency_map = []
+    for n in range(input_grads.shape[0]):
+        node_grads = input_grads[n, :]
+        node_saliency = torch.norm(F.relu(node_grads)).item()
+        node_saliency_map.append(node_saliency)
+    return node_saliency_map
+
+
+def plot_saliency_map_explanation(model, mol, featurized_mol):
+    saliency_map_weights = saliency_map(model, featurized_mol)
+    scaled_saliency_map_weights = MinMaxScaler().fit_transform(np.array(saliency_map_weights).reshape(-1, 1)).squeeze()
+    plt.imshow(img_for_mol(mol, scaled_saliency_map_weights))

@@ -12,7 +12,7 @@ class Featurizer:
         self.smiles_col = smiles_col
         self.log_target_transform = log_target_transform
         self.__dict__.update(kwargs)
-    
+
     def __call__(self, df):
         raise NotImplementedError()
 
@@ -23,7 +23,7 @@ class ECFPFeaturizer(Featurizer):
         self.radius = radius
         self.length = length
         super().__init__(y_col, **kwargs)
-    
+
     def __call__(self, molecules: list):
         fingerprints = []
         targets = []
@@ -49,12 +49,19 @@ class GraphFeaturizer(Featurizer):
                 edges.append((bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()))
                 edges.append((bond.GetEndAtomIdx(), bond.GetBeginAtomIdx()))
             edges = np.array(edges)
-            
+
             nodes = []
             for atom in mol.GetAtoms():
-                atom_encoding = self.one_of_k_encoding_unk(atom.GetSymbol(), ["C", "N", "O", "S", "Cl", "Br", "F", "I", "P", "unknown"])
+                atom_encoding = self.one_of_k_encoding_unk(
+                    atom.GetSymbol(), ["C", "N", "O", "S", "Cl", "Br", "F", "I", "P", "unknown"])
                 hydrogen_atoms = Chem.Atom.GetTotalNumHs(atom)
                 results = [*atom_encoding, hydrogen_atoms]
+                aromatic = atom.GetIsAromatic()
+                hybridization = atom.GetHybridization()
+                degree = atom.GetDegree()
+                implicit_valence = atom.GetImplicitValence()
+                formal_charge = atom.GetFormalCharge()
+                results.extend([aromatic, hybridization, degree, implicit_valence, formal_charge])
                 nodes.append(results)
             nodes = np.array(nodes)
 
@@ -64,16 +71,10 @@ class GraphFeaturizer(Featurizer):
         if self.log_target_transform:
             labels = np.log(labels + 1e-8)
         return [Data(
-            x=torch.FloatTensor(x), 
-            edge_index=torch.LongTensor(edge_index), 
+            x=torch.FloatTensor(x),
+            edge_index=torch.LongTensor(edge_index),
             y=torch.FloatTensor([y])
         ) for ((x, edge_index), y) in zip(graphs, labels)]
-    
-    def one_of_k_encoding(self, x, allowable_set):
-        if x not in allowable_set:
-            raise ValueError("input {0} not in allowable set{1}:".format(
-                x, allowable_set))
-        return list(map(lambda s: x == s, allowable_set))
 
     def one_of_k_encoding_unk(self, x, allowable_set):
         if x not in allowable_set:
