@@ -1,3 +1,4 @@
+from lime import lime_tabular
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -88,3 +89,52 @@ def plot_saliency_map_explanation(model, mol, featurized_mol):
     saliency_map_weights = saliency_map(model, featurized_mol)
     scaled_saliency_map_weights = MinMaxScaler().fit_transform(np.array(saliency_map_weights).reshape(-1, 1)).squeeze()
     plt.imshow(img_for_mol(mol, scaled_saliency_map_weights))
+
+
+def rate_saliency_map_on_synthetic_data(model, data, scaled_weight_threshold=0.5):
+    n_correct = 0
+    n_total = 0
+    for i in range(len(data)):
+        featurized_mol = data[i]
+        saliency_map_weights = saliency_map(model, featurized_mol)
+        scaled_saliency_map_weights = MinMaxScaler().fit_transform(np.array(saliency_map_weights).reshape(-1, 1)).squeeze()
+        is_aromatic = featurized_mol.x[:, -5].detach().cpu().numpy()
+        true_positives = np.logical_and(is_aromatic, scaled_saliency_map_weights > scaled_weight_threshold)
+        true_negatives = np.logical_and(np.logical_not(is_aromatic), scaled_saliency_map_weights < scaled_weight_threshold)
+        n_correct += np.logical_or(true_positives, true_negatives).sum()
+        n_total += len(featurized_mol.x)
+    return n_correct / n_total
+
+
+def rate_grad_cam_on_synthetic_data(model, data, scaled_weight_threshold=0.5):
+    n_correct = 0
+    n_total = 0
+    for i in range(len(data)):
+        featurized_mol = data[i]
+        grad_cam_weights = grad_cam(model, featurized_mol)
+        scaled_grad_cam_weights = MinMaxScaler().fit_transform(np.array(grad_cam_weights).reshape(-1, 1)).squeeze()
+        is_aromatic = featurized_mol.x[:, -5].detach().cpu().numpy()
+        true_positives = np.logical_and(is_aromatic, scaled_grad_cam_weights > scaled_weight_threshold)
+        true_negatives = np.logical_and(np.logical_not(is_aromatic), scaled_grad_cam_weights < scaled_weight_threshold)
+        n_correct += np.logical_or(true_positives, true_negatives).sum()
+        n_total += len(featurized_mol.x)
+    return n_correct / n_total
+
+
+def generate_lime_explanations(train_data, model, instances_to_explain):
+    explainer = lime_tabular.LimeTabularExplainer(train_data, feature_names=list(range(len(train_data))),
+                                                  categorical_features=list(range(len(train_data))))
+    result = []
+    for instance in instances_to_explain:
+        exp = explainer.explain_instance(instance, model.predict_proba, num_features=10, top_labels=2)
+        exp = exp.as_list()
+        for i in range(len(exp)):
+            exp_bit_number = exp[i][0][:-2]
+            exp_coefficient = exp[i][1]
+            # Convert all coefficients to correspond to existence of a bit.
+            # 0 - bit didn't appear in molecule, 1 - bit appeared in molecule.
+            if int(exp[i][0][-1]) == 0:
+                exp_coefficient = -exp_coefficient
+            exp[i] = (exp_bit_number, exp_coefficient)
+        result.append(exp)
+    return result
