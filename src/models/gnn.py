@@ -38,7 +38,8 @@ class GraphConvolutionalNetwork(nn.Module):
     def forward(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
         self.input = x
-        x.requires_grad = True
+        if x.is_leaf:
+            x.requires_grad = True
         h = x.clone()
         for conv in self.gcn[:-1]:
             h = conv(h, edge_index)
