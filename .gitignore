@@ -1,7 +1,8 @@
 openai
-models
+/models
 .idea
 catboost_info
 data
 sandbox.ipynb
 *.cfg
+*.pyc
