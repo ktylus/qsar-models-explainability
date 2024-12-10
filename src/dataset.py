@@ -2,6 +2,7 @@ import copy
 
 import rdkit.Chem as Chem
 import numpy as np
+from tdc import ADME, Tox
 import torch
 
 
@@ -16,10 +17,7 @@ def create_synthetic_dataset(smiles_for_class_task, n_samples=10000):
     return molecules
 
 
-def create_synthetic_target(
-        data,
-        smiles_for_class_task,
-):
+def create_synthetic_target(data, smiles_for_class_task):
     y_synthetic = []
     for mol in data:
         target_value = 0
@@ -29,11 +27,43 @@ def create_synthetic_target(
     return np.array(y_synthetic)
 
 
-def get_graph_data_with_substituted_target(
-        data,
-        target
-):
+def get_graph_data_with_substituted_target(data, target):
     data_copy = copy.deepcopy(data)
     for i in range(len(data_copy)):
         data_copy[i].y = torch.Tensor([target[i]])
     return data_copy
+
+
+def load_cyp_data_split():
+    data = ADME(name='CYP3A4_Veith')
+    train, valid, test = get_tdc_data_split_components(data.get_split())
+    return train, valid, test
+
+
+def load_herg_data_split():
+    data = Tox(name='hERG_Karim')
+    train, valid, test = get_tdc_data_split_components(data.get_split())
+    return train, valid, test
+
+
+def load_pampa_data_split():
+    data = ADME(name='PAMPA_NCATS')
+    train, valid, test = get_tdc_data_split_components(data.get_split())
+    return train, valid, test
+
+
+def get_tdc_data_split_components(tdc_data):
+    train, valid, test = tdc_data['train'], tdc_data['valid'], tdc_data['test']
+    train = create_mol_data_from_tdc_data(train)
+    valid = create_mol_data_from_tdc_data(valid)
+    test = create_mol_data_from_tdc_data(test)
+    return train, valid, test
+
+
+def create_mol_data_from_tdc_data(tdc_data):
+    mols = []
+    for _, row in tdc_data.iterrows():
+        mol = Chem.MolFromSmiles(row['Drug'])
+        mol.SetProp('y', str(row['Y']))
+        mols.append(mol)
+    return mols
