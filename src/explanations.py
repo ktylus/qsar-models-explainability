@@ -1,6 +1,7 @@
 from lime import lime_tabular
 import torch
 import torch.nn.functional as F
+import torch_geometric as tg
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
@@ -82,6 +83,7 @@ def saliency_map(model, featurized_mol):
         node_grads = input_grads[n, :]
         node_saliency = torch.norm(F.relu(node_grads)).item()
         node_saliency_map.append(node_saliency)
+    model.input.grad = None
     return node_saliency_map
 
 
@@ -138,3 +140,27 @@ def generate_lime_explanations(train_data, model, instances_to_explain):
             exp[i] = (exp_bit_number, exp_coefficient)
         result.append(exp)
     return result
+
+
+def batch_grad_cam(model, batch):
+    model.train()
+    batch = batch.to(device)
+    output = model(batch)
+    loss = F.binary_cross_entropy(output, batch.y.view(-1, 1))
+    loss.backward()
+    alphas = tg.utils.scatter(model.final_conv_grads, index=batch.batch, reduce="mean") * len(batch)
+    # Grad-CAM scores for each node in the batch.
+    # Nodes are assigned to graphs by the batch.batch tensor.
+    node_heat_map = F.relu(model.final_conv_activations @ alphas.T).gather(1, batch.batch.view(-1, 1)).squeeze()
+    return node_heat_map, batch.batch
+
+
+def batch_saliency_map(model, batch):
+    model.train()
+    batch = batch.to(device)
+    output = model(batch)
+    loss = F.binary_cross_entropy(output, batch.y.view(-1, 1))
+    loss.backward()
+    node_saliency = torch.norm(F.relu(model.input.grad), dim=1) * len(batch)
+    model.input.grad = None
+    return node_saliency, batch.batch
