@@ -5,6 +5,7 @@ import pubchempy as pcp
 from sklearn.tree import DecisionTreeRegressor, plot_tree
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw, rdMolDescriptors
+import torch_geometric as tg
 
 
 def save_decision_tree_graph(model: DecisionTreeRegressor, filename: str):
@@ -97,14 +98,14 @@ def get_morgan_fragment(molecule, bit, radius=2, nBits=2048):
     # Generate the Morgan fingerprint
     info = {}
     _ = rdMolDescriptors.GetMorganFingerprintAsBitVect(molecule, radius, nBits=nBits, bitInfo=info)
-    
+
     # Check if the bit is in the fingerprint
     if bit not in info:
         raise ValueError(f"Bit {bit} is not present in the fingerprint.")
-    
+
     # Get the atom indices and radius for the bit
     atom_indices, bit_radius = info[bit][0]
-    
+
     # Get the fragment corresponding to the bit
     if bit_radius == 0:
         frag = Chem.MolFromSmarts(molecule.GetAtomWithIdx(atom_indices).GetSmarts())
@@ -112,5 +113,18 @@ def get_morgan_fragment(molecule, bit, radius=2, nBits=2048):
         env = Chem.FindAtomEnvironmentOfRadiusN(molecule, bit_radius, atom_indices)
         amap = {}
         frag = Chem.PathToSubmol(molecule, env, atomMap=amap)
-    
+
     return frag
+
+
+def get_graph_batch_with_inverted_target(batch):
+    batch_copy = copy.deepcopy(batch)
+    batch_copy.y = (~batch_copy.y.bool()).float()
+    return batch_copy
+
+
+def min_max_scale_graph_batch(data, batch):
+    max_exp_values = tg.utils.scatter(data, batch, dim=0, reduce="max")
+    max_exp_values_expanded = max_exp_values[batch]
+    max_exp_values_expanded[max_exp_values_expanded == 0] = 1
+    return data / max_exp_values_expanded
