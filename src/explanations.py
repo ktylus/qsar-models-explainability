@@ -152,7 +152,7 @@ def batch_grad_cam(model, batch):
     # Grad-CAM scores for each node in the batch.
     # Nodes are assigned to graphs by the batch.batch tensor.
     node_heat_map = F.relu(model.final_conv_activations @ alphas.T).gather(1, batch.batch.view(-1, 1)).squeeze()
-    return node_heat_map, batch.batch
+    return node_heat_map
 
 
 def batch_saliency_map(model, batch):
@@ -163,4 +163,4 @@ def batch_saliency_map(model, batch):
     loss.backward()
     node_saliency = torch.norm(F.relu(model.input.grad), dim=1) * len(batch)
     model.input.grad = None
-    return node_saliency, batch.batch
+    return node_saliency
