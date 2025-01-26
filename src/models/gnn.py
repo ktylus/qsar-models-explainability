@@ -13,18 +13,21 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class GraphConvolutionalNetwork(nn.Module):
-    def __init__(self, input_dim: int, hidden_size: int, n_layers: int):
+    def __init__(self, input_dim: int, hidden_size: int, n_layers: int, dropout: float = 0.5):
         super(GraphConvolutionalNetwork, self).__init__()
 
         self.gcn = nn.ModuleList(
             [GCNConv(input_dim, hidden_size)] +
             [GCNConv(hidden_size, hidden_size)] * (n_layers - 1)
         )
+        self.dropout = nn.Dropout(dropout)
         self.linear = nn.Sequential(
             nn.Linear(3 * hidden_size, 3 * hidden_size),
             nn.ReLU(),
+            nn.Dropout(dropout),
             nn.Linear(3 * hidden_size, hidden_size),
             nn.ReLU(),
+            nn.Dropout(dropout),
             nn.Linear(hidden_size, 1)
         )
 
@@ -44,11 +47,13 @@ class GraphConvolutionalNetwork(nn.Module):
         for conv in self.gcn[:-1]:
             h = conv(h, edge_index)
             h = F.relu(h)
+            h = self.dropout(h)
         last_conv = self.gcn[-1]
         with torch.enable_grad():
             self.final_conv_activations = last_conv(h, edge_index)
         self.final_conv_activations.register_hook(self.activation_hook)
         h = F.relu(self.final_conv_activations)
+        h = self.dropout(h)
 
         pool1 = global_mean_pool(h, batch)
         pool2 = global_max_pool(h, batch)
@@ -58,7 +63,7 @@ class GraphConvolutionalNetwork(nn.Module):
         h = nn.Sigmoid()(h)
         return h
 
-    def train_model(self, train_loader, test_loader, epochs=10, lr=0.001, early_stopping=None):
+    def train_model(self, train_loader, test_loader, epochs=10, lr=0.001, early_stopping=None, verbose=True):
         optimizer = torch.optim.Adam(self.parameters(), lr=lr)
         for epoch in range(epochs):
             self.train()
@@ -81,12 +86,14 @@ class GraphConvolutionalNetwork(nn.Module):
                     loss = F.binary_cross_entropy(output.squeeze(), batch.y)
                     test_loss += loss.item()
                 test_loss /= len(test_loader)
-                print(f'Epoch: {epoch}, train loss: {train_loss:.4f}, test loss: {test_loss:.4f}')
+                if verbose:
+                    print(f'Epoch: {epoch}, train loss: {train_loss:.4f}, test loss: {test_loss:.4f}')
 
             if early_stopping:
                 early_stopping(self, test_loss)
                 if early_stopping.stop:
-                    print(f"Early stopping on epoch {epoch}")
+                    if verbose:
+                        print(f"Early stopping on epoch {epoch}")
                     self.load_state_dict(early_stopping.get_best_model_parameters())
                     break
 

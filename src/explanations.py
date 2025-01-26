@@ -51,7 +51,7 @@ def img_for_mol(mol, atom_weights):
 
 # from https://github.com/ndey96/GCNN-Explainability/blob/master/explain.py
 def grad_cam(model, featurized_mol):
-    model.train()
+    model.eval()
     featurized_mol = featurized_mol.to(device)
     output = model(featurized_mol)
     loss = F.binary_cross_entropy(output, featurized_mol.y.reshape(-1, 1))
@@ -72,7 +72,7 @@ def plot_grad_cam_explanation(model, mol, featurized_mol):
 
 # from https://github.com/ndey96/GCNN-Explainability/blob/master/explain.py
 def saliency_map(model, featurized_mol):
-    model.train()
+    model.eval()
     featurized_mol = featurized_mol.to(device)
     output = model(featurized_mol)
     loss = F.binary_cross_entropy(output, featurized_mol.y.reshape(-1, 1))
@@ -143,7 +143,7 @@ def generate_lime_explanations(train_data, model, instances_to_explain):
 
 
 def batch_grad_cam(model, batch):
-    model.train()
+    model.eval()
     batch = batch.to(device)
     output = model(batch)
     loss = F.binary_cross_entropy(output, batch.y.view(-1, 1))
@@ -156,7 +156,7 @@ def batch_grad_cam(model, batch):
 
 
 def batch_saliency_map(model, batch):
-    model.train()
+    model.eval()
     batch = batch.to(device)
     output = model(batch)
     loss = F.binary_cross_entropy(output, batch.y.view(-1, 1))
