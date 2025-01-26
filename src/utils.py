@@ -16,20 +16,6 @@ def save_decision_tree_graph(model: DecisionTreeRegressor, filename: str):
     plt.close()
 
 
-def load_data():
-    data = Chem.SDMolSupplier("data/caco2_permeability_from_Chembl_permeability.sdf")
-    data2 = Chem.SDMolSupplier("data/CYP2D6_IC50_CHEMBL_data.sdf")
-    data3 = Chem.SDMolSupplier("data/CYP3A4_IC50_CHEMBL_data.sdf")
-    data4 = Chem.SDMolSupplier("data/genotoxicity_from_chembl_data.sdf")
-    data5 = Chem.SDMolSupplier("data/hERG_IC50_CHEMBL_data.sdf")
-    datasets = (data, data2, data3, data4, data5)
-    return datasets
-
-
-def get_data_target_field_names():
-    return ("Field 11", "Standard Value", "Standard Value", "Field 11", "Standard Value")
-
-
 def draw_morgan_bit_many_molecules(molecules: list, bit_id, radius=2, length=1024):
     target_mols = []
     bit_infos = []
@@ -113,7 +99,6 @@ def get_morgan_fragment(molecule, bit, radius=2, nBits=2048):
         env = Chem.FindAtomEnvironmentOfRadiusN(molecule, bit_radius, atom_indices)
         amap = {}
         frag = Chem.PathToSubmol(molecule, env, atomMap=amap)
-
     return frag
 
 
@@ -128,3 +113,14 @@ def min_max_scale_graph_batch(data, batch):
     max_exp_values_expanded = max_exp_values[batch]
     max_exp_values_expanded[max_exp_values_expanded == 0] = 1
     return data / max_exp_values_expanded
+
+
+def get_data_partition_on_substructure_presence(data, substructure_smiles):
+    has_substructure = []
+    no_substructure = []
+    for mol in data:
+        if mol.HasSubstructMatch(Chem.MolFromSmiles(substructure_smiles)):
+            has_substructure.append(mol)
+        else:
+            no_substructure.append(mol)
+    return has_substructure, no_substructure
