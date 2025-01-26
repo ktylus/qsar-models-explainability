@@ -2,7 +2,7 @@ import copy
 
 import rdkit.Chem as Chem
 import numpy as np
-from tdc import ADME, Tox
+from tdc.single_pred import ADME, Tox
 import torch
 
 
@@ -41,7 +41,7 @@ def load_cyp_data_split():
 
 
 def load_herg_data_split():
-    data = Tox(name='hERG_Karim')
+    data = Tox(name='hERG')
     train, valid, test = get_tdc_data_split_components(data.get_split())
     return train, valid, test
 
