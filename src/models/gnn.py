@@ -5,6 +5,7 @@ from torch_geometric.nn import (
     global_add_pool,
 )
 import torch
+from sklearn.metrics import roc_auc_score
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -97,25 +98,21 @@ class GraphConvolutionalNetwork(nn.Module):
                     self.load_state_dict(early_stopping.get_best_model_parameters())
                     break
 
-    def r2_score(self, test_loader):
-        """
-        Calculate the R^2 score of the model on the test set
-        """
+    def evaluate_roc(self, data):
+        self.eval()
         with torch.no_grad():
             data_sum = 0.0
             n_observations = 0
             predictions = []
             actuals = []
-            for batch in test_loader:
-                batch.x, batch.y = batch.x.to(device), batch.y.to(device)
-                batch.edge_index, batch.batch = batch.edge_index.to(device), batch.batch.to(device)
-                output = self(batch.x, batch.edge_index, batch.batch)
+            for batch in data:
+                batch = batch.to(device)
+                output = self(batch)
                 data_sum += batch.y.sum().item()
                 predictions.append(output.squeeze().detach().cpu())
                 actuals.append(batch.y.detach().cpu())
                 n_observations += batch.y.shape[0]
-            predictions = torch.concatenate(predictions)
-            actuals = torch.concatenate(actuals)
-            data_mean = data_sum / n_observations
-            r_squared = ((predictions - data_mean) ** 2).sum() / ((actuals - data_mean) ** 2).sum()
-        return r_squared.item()
+            predictions = torch.cat(predictions)
+            actuals = torch.cat(actuals)
+        roc_score = roc_auc_score(actuals.numpy(), predictions.numpy())
+        return roc_score
