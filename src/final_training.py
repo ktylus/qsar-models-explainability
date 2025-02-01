@@ -9,7 +9,8 @@ from torch_geometric.loader import DataLoader as GraphDataLoader
 from src.dataset import (
     load_herg_data_split,
     load_pampa_data_split,
-    load_cyp_data_split
+    load_cyp_data_split,
+    load_synthetic_data_split
 )
 from src.early_stopping import EarlyStopping
 from src.featurizers import ECFPFeaturizer, GraphFeaturizer
@@ -18,9 +19,11 @@ from tuning_results import (
     herg_gnn_params,
     pampa_gnn_params,
     cyp_gnn_params,
+    synthetic_gnn_params,
     herg_catboost_params,
     pampa_catboost_params,
-    cyp_catboost_params
+    cyp_catboost_params,
+    synthetic_catboost_params
 )
 
 device = "cuda"
@@ -78,3 +81,7 @@ if __name__ == "__main__":
     train_cyp, _, test_cyp = load_cyp_data_split()
     train_tuned_gnn(train_cyp, test_cyp, "y", cyp_gnn_params, "models/gnn_tuned_cyp.pth")
     train_tuned_catboost(train_cyp, test_cyp, "y", cyp_catboost_params, "models/catboost_tuned_cyp.cbm")
+
+    train_synthetic, _, test_synthetic = load_synthetic_data_split()
+    train_tuned_gnn(train_synthetic, test_synthetic, "y", synthetic_gnn_params, "models/gnn_tuned_synthetic.pth")
+    train_tuned_catboost(train_synthetic, test_synthetic, "y", synthetic_catboost_params, "models/catboost_tuned_synthetic.cbm")

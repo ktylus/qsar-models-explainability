@@ -1,12 +1,18 @@
 import copy
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import rdkit.Chem as Chem
 import numpy as np
 from tdc.single_pred import ADME, Tox
 import torch
 
+from src.splitters import ScaffoldSplitter
+from src.featurizers import GraphFeaturizer
 
-def create_synthetic_dataset(smiles_for_class_task, n_samples=10000):
+
+def create_synthetic_dataset(smiles_for_class_task="c1ccccc1", n_samples=1000):
     with open("data/ChEMBL_filtered.txt", "r") as f:
         smiles = [next(f).strip() for _ in range(n_samples)]
     molecules = [Chem.MolFromSmiles(smi) for smi in smiles]
@@ -32,6 +38,14 @@ def get_graph_data_with_substituted_target(data, target):
     for i in range(len(data_copy)):
         data_copy[i].y = torch.Tensor([target[i]])
     return data_copy
+
+
+def load_synthetic_data_split():
+    data = create_synthetic_dataset()
+    splitter = ScaffoldSplitter()
+    train, test = splitter.train_test_molecules_split(data, "y")
+    train, val = splitter.train_test_molecules_split(train, "y")
+    return train, val, test
 
 
 def load_cyp_data_split():

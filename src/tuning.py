@@ -6,7 +6,12 @@ from catboost import CatBoostClassifier
 import optuna
 from torch_geometric.loader import DataLoader as GraphDataLoader
 
-from src.dataset import load_cyp_data_split, load_herg_data_split, load_pampa_data_split
+from src.dataset import (
+    load_cyp_data_split,
+    load_herg_data_split,
+    load_pampa_data_split,
+    load_synthetic_data_split
+)
 from src.featurizers import GraphFeaturizer, ECFPFeaturizer
 from src.models.gnn import GraphConvolutionalNetwork
 from src.early_stopping import EarlyStopping
@@ -77,25 +82,25 @@ if __name__ == "__main__":
     train, val, _ = load_cyp_data_split()
     cyp_best_params = tune_gnn_hyperparameters(train, val, y_col="y", n_trials=50)
 
+    train, val, _ = load_synthetic_data_split()
+    synthetic_best_params = tune_gnn_hyperparameters(train, val, y_col="y", n_trials=50)
+
     results_file = "tuning_results.txt"
     with open(results_file, "w") as f:
         f.write("GNN:\n\n")
         f.write(f"hERG dataset: \n{herg_best_params}\n")
         f.write(f"PAMPA dataset: \n{pampa_best_params}\n")
         f.write(f"CYP3A4 dataset: \n{cyp_best_params}\n")
+        f.write(f"Synthetic dataset: \n{synthetic_best_params}\n")
 
-    train, val, _ = load_herg_data_split()
     herg_best_params = tune_catboost_hyperparameters(train, val, y_col="y", n_trials=50)
-
-    train, val, _ = load_pampa_data_split()
     pampa_best_params = tune_catboost_hyperparameters(train, val, y_col="y", n_trials=50)
-
-    train, val, _ = load_cyp_data_split()
     cyp_best_params = tune_catboost_hyperparameters(train, val, y_col="y", n_trials=50)
+    synthetic_best_params = tune_catboost_hyperparameters(train, val, y_col="y", n_trials=50)
 
-    results_file = "tuning_results.txt"
     with open(results_file, "a") as f:
         f.write("\n\nCatBoost:\n\n")
         f.write(f"hERG dataset: \n{herg_best_params}\n")
         f.write(f"PAMPA dataset: \n{pampa_best_params}\n")
         f.write(f"CYP3A4 dataset: \n{cyp_best_params}\n")
+        f.write(f"Synthetic dataset: \n{synthetic_best_params}\n")
