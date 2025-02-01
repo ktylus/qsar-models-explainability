@@ -39,13 +39,6 @@ def draw_morgan_bit_many_molecules(molecules: list, bit_id, radius=2, length=102
         ax[i // 5, i % 5].set_title(f'mol {i}')
 
 
-def load_synthetic_target_data():
-    with open("data/ChEMBL_filtered.txt", "r") as f:
-        smiles = f.readlines()
-    molecules = [Chem.MolFromSmiles(smi) for smi in smiles]
-    return molecules
-
-
 def get_iupac_name_of_smiles(smiles_string):
     """
     Returns the IUPAC name of a compound given its SMILES string.
