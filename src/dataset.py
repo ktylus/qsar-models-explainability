@@ -5,6 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import rdkit.Chem as Chem
 import numpy as np
+import pandas as pd
 from tdc.single_pred import ADME, Tox
 import torch
 
@@ -12,9 +13,8 @@ from src.splitters import ScaffoldSplitter
 from src.featurizers import GraphFeaturizer
 
 
-def create_synthetic_dataset(smiles_for_class_task="c1ccccc1", n_samples=1000):
-    with open("data/ChEMBL_filtered.txt", "r") as f:
-        smiles = [next(f).strip() for _ in range(n_samples)]
+def create_synthetic_dataset(smiles_for_class_task="c1ccccc1", n_samples=1000, random_state=42):
+    smiles = pd.read_csv("data/ChEMBL_filtered.csv").sample(n_samples, random_state=random_state)["Drug"].values
     molecules = [Chem.MolFromSmiles(smi) for smi in smiles]
     # Set target values.
     targets = create_synthetic_target(molecules, smiles_for_class_task)

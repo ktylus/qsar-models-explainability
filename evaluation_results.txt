@@ -3,9 +3,12 @@ GNN:
 hERG dataset: 0.8251
 PAMPA dataset: 0.7557
 CYP3A4 dataset: 0.8543
+Synthetic dataset: 0.9801
+
 
 Catboost:
 
 hERG dataset: 0.7271
 PAMPA dataset: 0.5894
 CYP3A4 dataset: 0.7874
+Synthetic dataset: 0.7083

@@ -10,14 +10,16 @@ from torch_geometric.loader import DataLoader as GraphDataLoader
 from src.dataset import(
     load_herg_data_split,
     load_pampa_data_split,
-    load_cyp_data_split
+    load_cyp_data_split,
+    load_synthetic_data_split
 )
 from src.featurizers import ECFPFeaturizer, GraphFeaturizer
 from src.models.gnn import GraphConvolutionalNetwork
 from tuning_results import (
     herg_gnn_params,
     pampa_gnn_params,
-    cyp_gnn_params
+    cyp_gnn_params,
+    synthetic_gnn_params
 )
 
 device = "cuda"
@@ -69,13 +71,19 @@ if __name__ == "__main__":
     cyp_auc_gnn = evaluate_gnn(cyp_test, "y", "cyp", cyp_gnn_params)
     cyp_auc_catboost = evaluate_catboost(cyp_test, "y", "cyp")
 
+    synthetic_train, _, synthetic_test = load_synthetic_data_split()
+    synthetic_auc_gnn = evaluate_gnn(synthetic_test, "y", "synthetic", synthetic_gnn_params)
+    synthetic_auc_catboost = evaluate_catboost(synthetic_test, "y", "synthetic")
+
     results_file = "evaluation_results.txt"
     with open(results_file, "w") as f:
         f.write("GNN:\n\n")
         f.write(f"hERG dataset: {herg_auc_gnn:.4f}\n")
         f.write(f"PAMPA dataset: {pampa_auc_gnn:.4f}\n")
         f.write(f"CYP3A4 dataset: {cyp_auc_gnn:.4f}\n")
+        f.write(f"Synthetic dataset: {synthetic_auc_gnn:.4f}\n\n")
         f.write("\nCatboost:\n\n")
         f.write(f"hERG dataset: {herg_auc_catboost:.4f}\n")
         f.write(f"PAMPA dataset: {pampa_auc_catboost:.4f}\n")
         f.write(f"CYP3A4 dataset: {cyp_auc_catboost:.4f}\n")
+        f.write(f"Synthetic dataset: {synthetic_auc_catboost:.4f}\n")
