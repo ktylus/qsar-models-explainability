@@ -75,7 +75,7 @@ if __name__ == "__main__":
     synthetic_auc_gnn = evaluate_gnn(synthetic_test, "y", "synthetic", synthetic_gnn_params)
     synthetic_auc_catboost = evaluate_catboost(synthetic_test, "y", "synthetic")
 
-    results_file = "evaluation_results.txt"
+    results_file = "results/roc_auc.txt"
     with open(results_file, "w") as f:
         f.write("GNN:\n\n")
         f.write(f"hERG dataset: {herg_auc_gnn:.4f}\n")
