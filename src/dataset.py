@@ -1,4 +1,3 @@
-import copy
 import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -7,10 +6,8 @@ import rdkit.Chem as Chem
 import numpy as np
 import pandas as pd
 from tdc.single_pred import ADME, Tox
-import torch
 
 from src.splitters import ScaffoldSplitter
-from src.featurizers import GraphFeaturizer
 
 
 def create_synthetic_dataset(smiles_for_class_task="c1ccccc1", n_samples=1000, random_state=42):
@@ -31,13 +28,6 @@ def create_synthetic_target(data, smiles_for_class_task):
             target_value = 1
         y_synthetic.append(target_value)
     return np.array(y_synthetic)
-
-
-def get_graph_data_with_substituted_target(data, target):
-    data_copy = copy.deepcopy(data)
-    for i in range(len(data_copy)):
-        data_copy[i].y = torch.Tensor([target[i]])
-    return data_copy
 
 
 def load_synthetic_data_split():

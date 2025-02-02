@@ -2,18 +2,15 @@ import copy
 
 import matplotlib.pyplot as plt
 import pubchempy as pcp
-from sklearn.tree import DecisionTreeRegressor, plot_tree
 from rdkit import Chem
 from rdkit.Chem import AllChem, Draw, rdMolDescriptors
+import torch
 import torch_geometric as tg
 
+from src.featurizers import GraphFeaturizer
+from src.models.gnn import GraphConvolutionalNetwork
 
-def save_decision_tree_graph(model: DecisionTreeRegressor, filename: str):
-    assert filename.split(".")[-1] in ["png", "pdf"]
-    plt.figure(figsize=(20, 10))
-    plot_tree(model)
-    plt.savefig(filename)
-    plt.close()
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def draw_morgan_bit_many_molecules(molecules: list, bit_id, radius=2, length=1024):
@@ -97,7 +94,7 @@ def get_morgan_fragment(molecule, bit, radius=2, nBits=2048):
 
 def get_graph_batch_with_inverted_target(batch):
     batch_copy = copy.deepcopy(batch)
-    batch_copy.y = (~batch_copy.y.bool()).float()
+    batch_copy.y = 1 - batch_copy.y
     return batch_copy
 
 
@@ -117,3 +114,18 @@ def get_data_partition_on_substructure_presence(data, substructure_smiles):
         else:
             no_substructure.append(mol)
     return has_substructure, no_substructure
+
+
+def load_gnn_model(data, dataset_name, best_params):
+    graph_featurizer = GraphFeaturizer(y_col="y", log_target_transform=False)
+    graph_test = graph_featurizer(data)
+
+    model_path = f"models/gnn_tuned_{dataset_name}.pth"
+    model = GraphConvolutionalNetwork(
+        input_dim=graph_test[0].x.shape[1],
+        hidden_size=best_params["hidden_size"],
+        n_layers=best_params["num_layers"],
+        dropout=best_params["dropout"]
+    ).to(device)
+    model.load_state_dict(torch.load(model_path))
+    return model
