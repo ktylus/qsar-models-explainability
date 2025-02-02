@@ -26,7 +26,7 @@ from tuning_results import (
     synthetic_catboost_params
 )
 
-device = "cuda"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def train_tuned_gnn(train, test, y_col, best_params, model_path):

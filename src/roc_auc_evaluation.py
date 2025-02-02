@@ -22,7 +22,7 @@ from tuning_results import (
     synthetic_gnn_params
 )
 
-device = "cuda"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def evaluate_gnn(test_data, y_col, dataset_name, best_params):

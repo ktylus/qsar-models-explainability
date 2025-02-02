@@ -4,6 +4,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from catboost import CatBoostClassifier
 import optuna
+import torch
 from torch_geometric.loader import DataLoader as GraphDataLoader
 
 from src.dataset import (
@@ -16,7 +17,7 @@ from src.featurizers import GraphFeaturizer, ECFPFeaturizer
 from src.models.gnn import GraphConvolutionalNetwork
 from src.early_stopping import EarlyStopping
 
-device = "cuda"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def tune_gnn_hyperparameters(train, val, y_col, n_trials):
