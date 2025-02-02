@@ -1,3 +1,5 @@
+from collections import deque
+
 from lime import lime_tabular
 import torch
 import torch.nn.functional as F
@@ -93,36 +95,6 @@ def plot_saliency_map_explanation(model, mol, featurized_mol):
     plt.imshow(img_for_mol(mol, scaled_saliency_map_weights))
 
 
-def rate_saliency_map_on_synthetic_data(model, data, scaled_weight_threshold=0.5):
-    n_correct = 0
-    n_total = 0
-    for i in range(len(data)):
-        featurized_mol = data[i]
-        saliency_map_weights = saliency_map(model, featurized_mol)
-        scaled_saliency_map_weights = MinMaxScaler().fit_transform(np.array(saliency_map_weights).reshape(-1, 1)).squeeze()
-        is_aromatic = featurized_mol.x[:, -5].detach().cpu().numpy()
-        true_positives = np.logical_and(is_aromatic, scaled_saliency_map_weights > scaled_weight_threshold)
-        true_negatives = np.logical_and(np.logical_not(is_aromatic), scaled_saliency_map_weights < scaled_weight_threshold)
-        n_correct += np.logical_or(true_positives, true_negatives).sum()
-        n_total += len(featurized_mol.x)
-    return n_correct / n_total
-
-
-def rate_grad_cam_on_synthetic_data(model, data, scaled_weight_threshold=0.5):
-    n_correct = 0
-    n_total = 0
-    for i in range(len(data)):
-        featurized_mol = data[i]
-        grad_cam_weights = grad_cam(model, featurized_mol)
-        scaled_grad_cam_weights = MinMaxScaler().fit_transform(np.array(grad_cam_weights).reshape(-1, 1)).squeeze()
-        is_aromatic = featurized_mol.x[:, -5].detach().cpu().numpy()
-        true_positives = np.logical_and(is_aromatic, scaled_grad_cam_weights > scaled_weight_threshold)
-        true_negatives = np.logical_and(np.logical_not(is_aromatic), scaled_grad_cam_weights < scaled_weight_threshold)
-        n_correct += np.logical_or(true_positives, true_negatives).sum()
-        n_total += len(featurized_mol.x)
-    return n_correct / n_total
-
-
 def generate_lime_explanations(train_data, model, instances_to_explain):
     explainer = lime_tabular.LimeTabularExplainer(train_data, feature_names=list(range(len(train_data))),
                                                   categorical_features=list(range(len(train_data))))
@@ -164,3 +136,24 @@ def batch_saliency_map(model, batch):
     node_saliency = torch.norm(F.relu(model.input.grad), dim=1) * len(batch)
     model.input.grad = None
     return node_saliency
+
+
+def get_connected_components_for_explanation(mol, exp_score, threshold):
+    visited = set()
+    components = []
+    for atom in mol.GetAtoms():
+        if atom.GetIdx() not in visited and exp_score[atom.GetIdx()] > threshold:
+            component = []
+            queue = deque([atom.GetIdx()])
+            visited.add(atom.GetIdx())
+
+            while queue:
+                current = queue.popleft()
+                component.append(current)
+                for neighbor in mol.GetAtomWithIdx(current).GetNeighbors():
+                    neighbor_idx = neighbor.GetIdx()
+                    if neighbor_idx not in visited and exp_score[neighbor_idx] > threshold:
+                        visited.add(neighbor_idx)
+                        queue.append(neighbor_idx)
+            components.append(component)
+    return components
