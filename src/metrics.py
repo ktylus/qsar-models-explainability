@@ -13,6 +13,6 @@ def calculate_batch_explanation_contrastivity(
     return exp_xor.sum().item() / total_nodes_found
 
 
-def calculate_batch_explanation_sparsity(explanation_batch, node_assignments, threshold=0.01):
+def calculate_batch_explanation_sparsity(explanation_batch, node_assignments, threshold=0.1):
     exp_batch_scaled = min_max_scale_graph_batch(explanation_batch, node_assignments)
-    return ((exp_batch_scaled > threshold).sum() / exp_batch_scaled.numel()).item()
+    return 1 - ((exp_batch_scaled > threshold).sum() / exp_batch_scaled.numel()).item()
