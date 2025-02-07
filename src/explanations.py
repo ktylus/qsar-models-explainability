@@ -6,7 +6,9 @@ import torch.nn.functional as F
 import torch_geometric as tg
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+import rdkit.Chem as Chem
 from rdkit.Chem import rdDepictor
 from rdkit.Chem.Draw import rdMolDraw2D
 import matplotlib
@@ -63,6 +65,7 @@ def grad_cam(model, featurized_mol):
     for n in range(model.final_conv_activations.shape[0]):
         node_heat = F.relu(alphas @ model.final_conv_activations[n]).item()
         node_heat_map.append(node_heat)
+    model.final_conv_grads = None
     return np.array(node_heat_map)
 
 
@@ -96,8 +99,8 @@ def plot_saliency_map_explanation(model, mol, featurized_mol):
 
 
 def generate_lime_explanations(train_data, model, instances_to_explain):
-    explainer = lime_tabular.LimeTabularExplainer(train_data, feature_names=list(range(len(train_data))),
-                                                  categorical_features=list(range(len(train_data))))
+    explainer = lime_tabular.LimeTabularExplainer(train_data, feature_names=list(range(len(train_data[0]))),
+                                                  categorical_features=list(range(len(train_data[0]))))
     result = []
     for instance in instances_to_explain:
         exp = explainer.explain_instance(instance, model.predict_proba, num_features=10, top_labels=2)
@@ -157,3 +160,66 @@ def get_connected_components_for_explanation(mol, exp_score, threshold):
                         queue.append(neighbor_idx)
             components.append(component)
     return components
+
+
+def get_n_atom_connected_components(mol, exp_score, threshold, n):
+    def dfs(atom_idx, current_component):
+        if len(current_component) == n:
+            component_set = set(current_component[:])
+            if component_set not in components:
+                components.append(component_set)
+            return
+        for neighbor in mol.GetAtomWithIdx(atom_idx).GetNeighbors():
+            neighbor_idx = neighbor.GetIdx()
+            if neighbor_idx not in current_component and exp_score[neighbor_idx] > threshold:
+                current_component.append(neighbor_idx)
+                dfs(neighbor_idx, current_component)
+                current_component.pop()
+
+    components = []
+    for atom in mol.GetAtoms():
+        if exp_score[atom.GetIdx()] > threshold:
+            dfs(atom.GetIdx(), [atom.GetIdx()])
+    components = [list(component) for component in components]
+    return components
+
+
+def rate_explanation_on_synthetic_data(model, mols, data, explanation_fn, scaled_weight_threshold=0.5, smiles_to_match="c1ccccc1"):
+    total_score = 0
+    for i in range(len(data)):
+        mol = mols[i]
+        featurized_mol = data[i]
+        explanation_weights = explanation_fn(model, featurized_mol)
+        scaled_explanation_weights = MinMaxScaler().fit_transform(np.array(explanation_weights).reshape(-1, 1)).squeeze()
+        substructure_match = mol.GetSubstructMatch(Chem.MolFromSmiles(smiles_to_match))
+        belongs_to_substructure = np.zeros(len(featurized_mol.x))
+        belongs_to_substructure[list(substructure_match)] = 1
+        # Intersection over union (IoU).
+        intersection = np.logical_and(belongs_to_substructure, scaled_explanation_weights > scaled_weight_threshold)
+        union = np.logical_or(belongs_to_substructure, scaled_explanation_weights > scaled_weight_threshold)
+        if np.sum(union) == 0:
+            continue
+        total_score += np.sum(intersection) / np.sum(union)
+    return total_score / len(data)
+
+
+def get_dataframe_from_lime_results(lime_results):
+    bit_numbers = []
+    coefficients = []
+    for mol_index in range(len(lime_results)):
+        for bit_index in range(len(lime_results[mol_index])):
+            bit_numbers.append(lime_results[mol_index][bit_index][0])
+            coefficients.append(lime_results[mol_index][bit_index][1])
+    lime_results_df = pd.DataFrame(data={"bit_number": bit_numbers, "coefficient": coefficients})
+    return lime_results_df
+
+
+def abs_feature_importance_and_lime_difference(feature_importances, lime_importances):
+    # Join top 10 feature importances with top 10 LIME importances on bit number to compare.
+    importance_lime_join = feature_importances.merge(lime_importances, on="bit_number", how="outer")
+    importance_lime_join = importance_lime_join.fillna(0)
+    importance_lime_join = importance_lime_join.rename(columns={"importance": "feature_importance", "coefficient": "lime_importance"})
+    importance_lime_join["feature_importance"] = importance_lime_join["feature_importance"] / importance_lime_join["feature_importance"].max()
+    importance_lime_join["lime_importance"] = importance_lime_join["lime_importance"] / importance_lime_join["lime_importance"].max()
+    # Mean of absolute scaled differences between feature importance and LIME importance. Baseline for comparing with real datasets.
+    return (importance_lime_join["feature_importance"] - importance_lime_join["lime_importance"]).abs().mean()

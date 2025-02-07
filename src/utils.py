@@ -1,5 +1,6 @@
 import copy
 
+from catboost import CatBoostClassifier
 import matplotlib.pyplot as plt
 import pubchempy as pcp
 from rdkit import Chem
@@ -129,3 +130,37 @@ def load_gnn_model(data, dataset_name, best_params):
     ).to(device)
     model.load_state_dict(torch.load(model_path))
     return model
+
+
+def load_catboost_model(dataset_name, best_params):
+    model = CatBoostClassifier(
+        iterations=9999,
+        learning_rate=best_params["lr"],
+        max_depth=best_params["max_depth"],
+        l2_leaf_reg=best_params["l2_leaf_reg"]
+    )
+    model = model.load_model(f"models/catboost_tuned_{dataset_name}.cbm")
+    return model
+
+
+def get_sub_molecule(mol, atom_indices):
+    # Create an editable molecule
+    editable_mol = Chem.EditableMol(Chem.Mol())
+
+    # Map old atom indices to new atom indices
+    old_to_new = {}
+    for i, atom_idx in enumerate(atom_indices):
+        atom = mol.GetAtomWithIdx(atom_idx)
+        new_idx = editable_mol.AddAtom(atom)
+        old_to_new[atom_idx] = new_idx
+
+    # Add bonds between the new atoms
+    for bond in mol.GetBonds():
+        begin_idx = bond.GetBeginAtomIdx()
+        end_idx = bond.GetEndAtomIdx()
+        if begin_idx in old_to_new and end_idx in old_to_new:
+            editable_mol.AddBond(old_to_new[begin_idx], old_to_new[end_idx], bond.GetBondType())
+
+    # Get the new molecule
+    sub_mol = editable_mol.GetMol()
+    return sub_mol

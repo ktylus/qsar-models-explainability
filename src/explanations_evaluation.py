@@ -51,13 +51,13 @@ def evaluate_sparsity_gnn(model, graph_data, explanation_fn):
     total_examples = 0
     for batch in data_loader:
         explanation_scores = explanation_fn(model, batch)
-        total_sparsity_score += len(batch) * calculate_batch_explanation_sparsity(explanation_scores, batch.batch,
-                                                                                  threshold=0.5)
+        total_sparsity_score += len(batch) * calculate_batch_explanation_sparsity(
+            explanation_scores, batch.batch, threshold=0.5)
         total_examples += len(batch)
     return total_sparsity_score / total_examples
 
 
-def run_experiment(test_data, dataset_name, best_params):
+def run_experiment_gnn(test_data, dataset_name, best_params):
     graph_test_data = graph_featurizer(test_data)
     model = load_gnn_model(test_data, dataset_name, best_params)
     contrastivity_gradcam = evaluate_contrastivity_gnn(model, graph_test_data, batch_grad_cam)
@@ -74,13 +74,13 @@ if __name__ == "__main__":
     graph_featurizer = GraphFeaturizer(y_col="y", log_target_transform=False)
 
     _, _, herg_test_data = load_herg_data_split()
-    run_experiment(herg_test_data, "herg", herg_gnn_params)
+    run_experiment_gnn(herg_test_data, "herg", herg_gnn_params)
 
     _, _, pampa_test = load_pampa_data_split()
-    run_experiment(pampa_test, "pampa", pampa_gnn_params)
+    run_experiment_gnn(pampa_test, "pampa", pampa_gnn_params)
 
     _, _, cyp_test = load_cyp_data_split()
-    run_experiment(cyp_test, "cyp", cyp_gnn_params)
+    run_experiment_gnn(cyp_test, "cyp", cyp_gnn_params)
 
     _, _, synthetic_test = load_synthetic_data_split()
-    run_experiment(synthetic_test, "synthetic", synthetic_gnn_params)
+    run_experiment_gnn(synthetic_test, "synthetic", synthetic_gnn_params)
