@@ -5,7 +5,7 @@ from catboost import CatBoostClassifier
 import matplotlib.pyplot as plt
 import pubchempy as pcp
 from rdkit import Chem
-from rdkit.Chem import AllChem, Draw, rdMolDescriptors
+from rdkit.Chem import AllChem, Draw, rdMolDescriptors, rdFingerprintGenerator
 import torch
 import torch_geometric as tg
 
@@ -15,27 +15,29 @@ from src.models.gnn import GraphConvolutionalNetwork
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def draw_morgan_bit_many_molecules(molecules: list, bit_id, radius=2, length=1024):
-    target_mols = []
-    bit_infos = []
-    mols_found = 0
-    for i, mol in enumerate(molecules):
-        if mols_found == 10:
+def draw_morgan_bit(molecules, bit_id, radius=2, length=2048):
+    for mol in molecules:
+        additional_output = rdFingerprintGenerator.AdditionalOutput()
+        additional_output.AllocateBitInfoMap()
+        fp_gen = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=length)
+        fp = fp_gen.GetFingerprint(mol, additionalOutput=additional_output)
+        if bit_id in additional_output.GetBitInfoMap():
             break
-        bit_info = {}
-        fp = AllChem.GetMorganFingerprintAsBitVect(mol, nBits=length, radius=radius, bitInfo=bit_info)
-        if fp[bit_id]:
-            mols_found += 1
-            target_mols.append(mol)
-            bit_infos.append(bit_info)
-    imgs = []
-    for mol, bit_info in zip(target_mols, bit_infos):
-        imgs.append(Draw.DrawMorganBit(mol, bit_id, bit_info))
-    fig, ax = plt.subplots(2, 5, figsize=(10, 4))
-    for i, img in enumerate(imgs[:10]):
-        ax[i // 5, i % 5].imshow(img)
-        ax[i // 5, i % 5].axis('off')
-        ax[i // 5, i % 5].set_title(f'mol {i}')
+    return Draw.DrawMorganBit(mol, bit_id, additional_output.GetBitInfoMap())
+
+
+def draw_many_morgan_bits(molecules, bit_ids, radius=2, length=2048):
+    results = []
+    for bit_id in bit_ids:
+        for mol in molecules:
+            additional_output = rdFingerprintGenerator.AdditionalOutput()
+            additional_output.AllocateBitInfoMap()
+            fp_gen = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=length)
+            fp = fp_gen.GetFingerprint(mol, additionalOutput=additional_output)
+            if bit_id in additional_output.GetBitInfoMap():
+                break
+        results.append((mol, bit_id, additional_output.GetBitInfoMap()))
+    return Draw.DrawMorganBits(results, molsPerRow=5, legends=[str(bit_id) for bit_id in bit_ids])
 
 
 def get_iupac_name_of_smiles(smiles_string):
