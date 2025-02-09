@@ -86,15 +86,17 @@ def get_morgan_fragment(molecule, bit, radius=2, nBits=2048):
     rdkit.Chem.rdchem.Mol: The fragment corresponding to the given bit.
     """
     # Generate the Morgan fingerprint
-    info = {}
-    _ = rdMolDescriptors.GetMorganFingerprintAsBitVect(molecule, radius, nBits=nBits, bitInfo=info)
+    fp_gen = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=nBits)
+    additional_output = rdFingerprintGenerator.AdditionalOutput()
+    additional_output.AllocateBitInfoMap()
+    fp = fp_gen.GetFingerprint(molecule, additionalOutput=additional_output)
 
     # Check if the bit is in the fingerprint
-    if bit not in info:
+    if bit not in additional_output.GetBitInfoMap():
         raise ValueError(f"Bit {bit} is not present in the fingerprint.")
 
     # Get the atom indices and radius for the bit
-    atom_indices, bit_radius = info[bit][0]
+    atom_indices, bit_radius = additional_output.GetBitInfoMap()[bit][0]
 
     # Get the fragment corresponding to the bit
     if bit_radius == 0:
