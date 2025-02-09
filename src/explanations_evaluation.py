@@ -38,7 +38,7 @@ def evaluate_contrastivity_gnn(model, graph_data, explanation_fn):
         explanation_scores = explanation_fn(model, batch)
         explanation_scores_inv = explanation_fn(model, batch_inv)
         total_contrastivity_score += len(batch) * calculate_batch_explanation_contrastivity(
-            explanation_scores, explanation_scores_inv, batch.batch, threshold=0.5)
+            explanation_scores, explanation_scores_inv, batch.batch, threshold=0.1)
         total_examples += len(batch)
     return total_contrastivity_score / total_examples
 
@@ -52,7 +52,7 @@ def evaluate_sparsity_gnn(model, graph_data, explanation_fn):
     for batch in data_loader:
         explanation_scores = explanation_fn(model, batch)
         total_sparsity_score += len(batch) * calculate_batch_explanation_sparsity(
-            explanation_scores, batch.batch, threshold=0.5)
+            explanation_scores, batch.batch, threshold=0.1)
         total_examples += len(batch)
     return total_sparsity_score / total_examples
 
@@ -62,12 +62,13 @@ def run_experiment_gnn(test_data, dataset_name, best_params):
     model = load_gnn_model(test_data, dataset_name, best_params)
     contrastivity_gradcam = evaluate_contrastivity_gnn(model, graph_test_data, batch_grad_cam)
     contrastivity_saliency_map = evaluate_contrastivity_gnn(model, graph_test_data, batch_saliency_map)
-    print(f"Contrastivity for GradCAM on {dataset_name} dataset: {contrastivity_gradcam:.4f}")
-    print(f"Contrastivity for Saliency map on {dataset_name} dataset: {contrastivity_saliency_map:.4f}")
     sparsity_gradcam = evaluate_sparsity_gnn(model, graph_test_data, batch_grad_cam)
     sparsity_saliency_map = evaluate_sparsity_gnn(model, graph_test_data, batch_saliency_map)
-    print(f"Sparsity for GradCAM on {dataset_name} dataset: {sparsity_gradcam:.4f}")
-    print(f"Sparsity for Saliency map on {dataset_name} dataset: {sparsity_saliency_map:.4f}")
+    with open(f"results/{dataset_name}_explanations_evaluation.txt", "w") as f:
+        f.write(f"Contrastivity for GradCAM on {dataset_name} dataset: {contrastivity_gradcam:.4f}\n")
+        f.write(f"Contrastivity for Saliency map on {dataset_name} dataset: {contrastivity_saliency_map:.4f}\n")
+        f.write(f"Sparsity for GradCAM on {dataset_name} dataset: {sparsity_gradcam:.4f}\n")
+        f.write(f"Sparsity for Saliency map on {dataset_name} dataset: {sparsity_saliency_map:.4f}\n")
 
 
 if __name__ == "__main__":
