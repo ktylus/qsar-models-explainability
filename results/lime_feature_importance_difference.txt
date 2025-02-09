@@ -5,9 +5,9 @@ Bits found by both methods were compared. If there was no bit on the other side 
 Lower = better.
 A kind of baseline: 0.333 - expected distance between 2 random points on [0,1] interval.
 
-herg: 0.37315615661094204
-cyp: 0.5171477886000302
-synthetic: 0.19227612337989802
+herg: 0.3455960086410675
+cyp: 0.5027919427276933
+synthetic: 0.17104930345530223
 
 These results suggest there is a big difference between LIME and feature importance scores.
 We can conclude that LIME is performing weakly, as feature importance scores are tied to training the model.
