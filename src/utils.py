@@ -1,4 +1,5 @@
 import copy
+import requests
 
 from catboost import CatBoostClassifier
 import matplotlib.pyplot as plt
@@ -48,8 +49,18 @@ def get_iupac_name_of_smiles(smiles_string):
     str: The IUPAC name of the compound.
     """
     # Search PubChem for the compound.
-    compound = pcp.get_compounds(smiles_string, 'smiles')
-    iupac_name = compound[0].iupac_name if compound else 'Not found'
+    try:
+        compound = pcp.get_compounds(smiles_string, 'smiles')
+        found = True
+    except Exception as e:
+        found = False
+    if found:
+        iupac_name = compound[0].iupac_name if compound else 'Not found'
+    else:
+        url = f"https://cactus.nci.nih.gov/chemical/structure/{smiles_string}/iupac_name"
+        response = requests.get(url)
+        response.raise_for_status()
+        iupac_name = response.text
     return iupac_name
 
 
