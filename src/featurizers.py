@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import AllChem
+from rdkit.Chem import AllChem, rdFingerprintGenerator
 from torch_geometric.data import Data
 
 
@@ -28,7 +28,8 @@ class ECFPFeaturizer(Featurizer):
         fingerprints = []
         targets = []
         for mol in molecules:
-            fp = AllChem.GetMorganFingerprintAsBitVect(mol, self.radius, nBits=self.length)
+            fp_gen = rdFingerprintGenerator.GetMorganGenerator(radius=self.radius, fpSize=self.length)
+            fp = fp_gen.GetFingerprint(mol)
             fingerprints.append(fp)
             targets.append(mol.GetProp(self.y_col))
         fingerprints = np.array(fingerprints)
