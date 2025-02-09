@@ -1,0 +1,4 @@
+Contrastivity for GradCAM on synthetic dataset: 1.0000
+Contrastivity for Saliency map on synthetic dataset: 0.0691
+Sparsity for GradCAM on synthetic dataset: 0.5006
+Sparsity for Saliency map on synthetic dataset: 0.3750

@@ -1,0 +1,4 @@
+Contrastivity for GradCAM on cyp dataset: 1.0000
+Contrastivity for Saliency map on cyp dataset: 0.0493
+Sparsity for GradCAM on cyp dataset: 0.5647
+Sparsity for Saliency map on cyp dataset: 0.0831

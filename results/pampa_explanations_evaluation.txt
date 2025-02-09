@@ -1,0 +1,4 @@
+Contrastivity for GradCAM on pampa dataset: 1.0000
+Contrastivity for Saliency map on pampa dataset: 0.1579
+Sparsity for GradCAM on pampa dataset: 0.2665
+Sparsity for Saliency map on pampa dataset: 0.2062

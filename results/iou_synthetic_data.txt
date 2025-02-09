@@ -1,0 +1,2 @@
+Intersection over union for GradCAM on synthetic data: 0.47581831181566
+Intersection over union for saliency map on synthetic data: 0.5275976351605364

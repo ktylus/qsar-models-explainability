@@ -1,0 +1,4 @@
+Contrastivity for GradCAM on herg dataset: 1.0000
+Contrastivity for Saliency map on herg dataset: 0.0000
+Sparsity for GradCAM on herg dataset: 0.7922
+Sparsity for Saliency map on herg dataset: 0.0000

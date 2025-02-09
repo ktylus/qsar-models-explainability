@@ -1,0 +1,13 @@
+Average absolute difference between LIME and feature importance scores.
+Scores were scaled to [0,1] (min max scaling)
+LIME globally approximated feature importance by sampling 50 molecules, doing LIME on each and aggregating the results (mean).
+Bits found by both methods were compared. If there was no bit on the other side of the comparison, a value of 0 was compared to instead.
+Lower = better.
+A kind of baseline: 0.333 - expected distance between 2 random points on [0,1] interval.
+
+herg: 0.37315615661094204
+cyp: 0.5171477886000302
+synthetic: 0.19227612337989802
+
+These results suggest there is a big difference between LIME and feature importance scores.
+We can conclude that LIME is performing weakly, as feature importance scores are tied to training the model.
