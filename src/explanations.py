@@ -54,13 +54,15 @@ def img_for_mol(mol, atom_weights):
 
 
 # from https://github.com/ndey96/GCNN-Explainability/blob/master/explain.py
-def grad_cam(model, featurized_mol):
+def grad_cam(model, featurized_mol, invert_gradients=False):
     model.eval()
     featurized_mol = featurized_mol.to(device)
     output = model(featurized_mol)
     loss = F.binary_cross_entropy(output, featurized_mol.y.reshape(-1, 1))
     loss.backward()
     node_heat_map = []
+    if invert_gradients:
+        model.final_conv_grads = (-1) * model.final_conv_grads
     alphas = torch.mean(model.final_conv_grads, axis=0)
     for n in range(model.final_conv_activations.shape[0]):
         node_heat = F.relu(alphas @ model.final_conv_activations[n]).item()
@@ -69,9 +71,9 @@ def grad_cam(model, featurized_mol):
     return np.array(node_heat_map)
 
 
-def plot_grad_cam_explanation(model, mol, featurized_mol):
-    grad_cam_weights = grad_cam(model, featurized_mol)
-    scaled_grad_cam_weights = MinMaxScaler().fit_transform(grad_cam_weights.reshape(-1, 1)).squeeze()
+def plot_grad_cam_explanation(model, mol, featurized_mol, invert_gradients=False):
+    grad_cam_weights = grad_cam(model, featurized_mol, invert_gradients)
+    scaled_grad_cam_weights = grad_cam_weights / grad_cam_weights.max()
     plt.imshow(img_for_mol(mol, scaled_grad_cam_weights))
 
 
@@ -89,12 +91,12 @@ def saliency_map(model, featurized_mol):
         node_saliency = torch.norm(F.relu(node_grads)).item()
         node_saliency_map.append(node_saliency)
     model.input.grad = None
-    return node_saliency_map
+    return np.array(node_saliency_map)
 
 
 def plot_saliency_map_explanation(model, mol, featurized_mol):
     saliency_map_weights = saliency_map(model, featurized_mol)
-    scaled_saliency_map_weights = MinMaxScaler().fit_transform(np.array(saliency_map_weights).reshape(-1, 1)).squeeze()
+    scaled_saliency_map_weights = saliency_map_weights / saliency_map_weights.max()
     plt.imshow(img_for_mol(mol, scaled_saliency_map_weights))
 
 
@@ -117,12 +119,14 @@ def generate_lime_explanations(train_data, model, instances_to_explain):
     return result
 
 
-def batch_grad_cam(model, batch):
+def batch_grad_cam(model, batch, invert_gradients=False):
     model.eval()
     batch = batch.to(device)
     output = model(batch)
     loss = F.binary_cross_entropy(output, batch.y.view(-1, 1))
     loss.backward()
+    if invert_gradients:
+        model.final_conv_grads = (-1) * model.final_conv_grads
     alphas = tg.utils.scatter(model.final_conv_grads, index=batch.batch, reduce="mean") * len(batch)
     # Grad-CAM scores for each node in the batch.
     # Nodes are assigned to graphs by the batch.batch tensor.
@@ -190,7 +194,7 @@ def rate_explanation_on_synthetic_data(model, mols, data, explanation_fn, scaled
         mol = mols[i]
         featurized_mol = data[i]
         explanation_weights = explanation_fn(model, featurized_mol)
-        scaled_explanation_weights = MinMaxScaler().fit_transform(np.array(explanation_weights).reshape(-1, 1)).squeeze()
+        scaled_explanation_weights = np.array(explanation_weights / explanation_weights.max())
         substructure_match = mol.GetSubstructMatch(Chem.MolFromSmiles(smiles_to_match))
         belongs_to_substructure = np.zeros(len(featurized_mol.x))
         belongs_to_substructure[list(substructure_match)] = 1
