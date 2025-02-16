@@ -27,7 +27,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # from https://github.com/ndey96/GCNN-Explainability/blob/master/explain.py
-def img_for_mol(mol, atom_weights):
+def img_for_mol(mol, atom_weights=None):
+    if atom_weights is None:
+        atom_weights = [0] * len(mol.GetAtoms())
     highlight_kwargs = {}
     norm = matplotlib.colors.Normalize(vmin=-1, vmax=1)
     cmap = cm.get_cmap('bwr')
