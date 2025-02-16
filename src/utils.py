@@ -179,3 +179,12 @@ def get_sub_molecule(mol, atom_indices):
     # Get the new molecule
     sub_mol = editable_mol.GetMol()
     return sub_mol
+
+
+def is_duplicate_in_list_of_lists(list_of_lists, lst):
+    for item in list_of_lists:
+        if len(item) != len(lst):
+            continue
+        if all(x in item for x in lst):
+            return True
+    return False

@@ -1,0 +1,77 @@
+Using GradCAM/saliency map I identified molecule components of size n, which were most often highlighted as important.
+If only part of an aromatic ring was highlighted, the component was expanded to include the whole ring.
+Here are the results of converting these components from SMILES to their IUPAC name, specifically - how often the conversion was successful.
+
+
+-----
+GradCAM:
+-----
+
+herg:
+size 3: 10/10
+size 4: 10/10
+size 5: 10/10
+size 6: 10/10
+size 7: 10/10
+size 8: 9/10 (missed CCOc1ccccc1OCF)
+
+pampa:
+size 3: 10/10
+size 4: 10/10
+size 5: 10/10
+size 6: 10/10
+size 7: 10/10
+size 8: 9/10 (missed O=[SH]c1ccccc1)
+
+cyp:
+size 3: 10/10
+size 4: 10/10
+size 5: 10/10
+size 6: 10/10
+size 7: 10/10
+size 8: 10/10
+
+synthetic:
+size 3: 9/10 (missed N[SH]=O)
+size 4: 9/10 (missed CN[SH]=O)
+size 5: 10/10
+size 6: 10/10
+size 7: 10/10
+size 8: 10/10
+
+
+-----
+saliency map:
+-----
+
+herg:
+size 3: 10/10
+size 4: 10/10
+size 5: 10/10
+size 6: 10/10
+size 7: 10/10
+size 8: 10/10
+
+pampa:
+size 3: 8/10 (missed N[SH]=O, O=[SH]c1ccccc1)
+size 4: 9/10 (missed CN[SH]=O)
+size 5: 9/10 (missed CCN[SH]=O)
+size 6: 10/10
+size 7: 10/10
+size 8: 8/10 (missed O=CCCCNc1nc(-c2ccccc2)cs1, NCCCCNc1nc(-c2ccccc2)cs1)
+
+cyp:
+size 3: 10/10
+size 4: 10/10
+size 5: 10/10
+size 6: 10/10
+size 7: 9/10 (missed CCCCN[SH]=O)
+size 8: 10/10
+
+synthetic:
+size 3: 10/10
+size 4: 10/10
+size 5: 10/10
+size 6: 10/10
+size 7: 10/10
+size 8: 10/10

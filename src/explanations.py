@@ -1,4 +1,7 @@
 from collections import deque
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from lime import lime_tabular
 import torch
@@ -14,11 +17,11 @@ from rdkit.Chem.Draw import rdMolDraw2D
 import matplotlib
 import matplotlib.cm as cm
 from skimage.io import imread
-import os
 # a way to make it work on Windows, it's very bad, and I had to install UniConvertor
 os.environ["path"] += r";C:\\Program Files\\UniConvertor-2.0rc5\dlls"
 from cairosvg import svg2png
 
+from src.utils import is_duplicate_in_list_of_lists
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -73,7 +76,7 @@ def grad_cam(model, featurized_mol, invert_gradients=False):
 
 def plot_grad_cam_explanation(model, mol, featurized_mol, invert_gradients=False):
     grad_cam_weights = grad_cam(model, featurized_mol, invert_gradients)
-    scaled_grad_cam_weights = grad_cam_weights / grad_cam_weights.max()
+    scaled_grad_cam_weights = MinMaxScaler().fit_transform(grad_cam_weights.reshape(-1, 1)).squeeze()
     plt.imshow(img_for_mol(mol, scaled_grad_cam_weights))
 
 
@@ -96,7 +99,7 @@ def saliency_map(model, featurized_mol):
 
 def plot_saliency_map_explanation(model, mol, featurized_mol):
     saliency_map_weights = saliency_map(model, featurized_mol)
-    scaled_saliency_map_weights = saliency_map_weights / saliency_map_weights.max()
+    scaled_saliency_map_weights = MinMaxScaler().fit_transform(saliency_map_weights.reshape(-1, 1)).squeeze()
     plt.imshow(img_for_mol(mol, scaled_saliency_map_weights))
 
 
@@ -167,6 +170,7 @@ def get_connected_components_for_explanation(mol, exp_score, threshold):
 
 
 def get_n_atom_connected_components(mol, exp_score, threshold, n):
+    scaled_exp_score = MinMaxScaler().fit_transform(exp_score.reshape(-1, 1)).squeeze()
     def dfs(atom_idx, current_component):
         if len(current_component) == n:
             component_set = set(current_component[:])
@@ -175,17 +179,43 @@ def get_n_atom_connected_components(mol, exp_score, threshold, n):
             return
         for neighbor in mol.GetAtomWithIdx(atom_idx).GetNeighbors():
             neighbor_idx = neighbor.GetIdx()
-            if neighbor_idx not in current_component and exp_score[neighbor_idx] > threshold:
+            if neighbor_idx not in current_component and scaled_exp_score[neighbor_idx] > threshold:
                 current_component.append(neighbor_idx)
                 dfs(neighbor_idx, current_component)
                 current_component.pop()
 
     components = []
     for atom in mol.GetAtoms():
-        if exp_score[atom.GetIdx()] > threshold:
+        if scaled_exp_score[atom.GetIdx()] > threshold:
             dfs(atom.GetIdx(), [atom.GetIdx()])
     components = [list(component) for component in components]
     return components
+
+
+def complete_rings(mol, atom_indices):
+    def dfs(atom_idx, current_component):
+        for neighbor in mol.GetAtomWithIdx(atom_idx).GetNeighbors():
+            neighbor_idx = neighbor.GetIdx()
+            if neighbor_idx not in current_component and neighbor.GetIsAromatic():
+                current_component.append(neighbor_idx)
+                result.append(neighbor_idx)
+                dfs(neighbor_idx, current_component)
+                current_component.pop()
+    
+    result = atom_indices.copy()
+    for atom_index in atom_indices:
+        if mol.GetAtomWithIdx(atom_index).GetIsAromatic():
+            dfs(atom_index, [atom_index])
+    return list(set(result))
+
+
+def complete_rings_in_components(mol, components):
+    result = []
+    for component in components:
+        completed_rings = complete_rings(mol, component)
+        if not is_duplicate_in_list_of_lists(result, completed_rings):
+            result.append(complete_rings(mol, component))
+    return result
 
 
 def rate_explanation_on_synthetic_data(model, mols, data, explanation_fn, scaled_weight_threshold=0.5, smiles_to_match="c1ccccc1"):
@@ -194,7 +224,7 @@ def rate_explanation_on_synthetic_data(model, mols, data, explanation_fn, scaled
         mol = mols[i]
         featurized_mol = data[i]
         explanation_weights = explanation_fn(model, featurized_mol)
-        scaled_explanation_weights = np.array(explanation_weights / explanation_weights.max())
+        scaled_explanation_weights = MinMaxScaler().fit_transform(explanation_weights.reshape(-1, 1)).squeeze()
         substructure_match = mol.GetSubstructMatch(Chem.MolFromSmiles(smiles_to_match))
         belongs_to_substructure = np.zeros(len(featurized_mol.x))
         belongs_to_substructure[list(substructure_match)] = 1
