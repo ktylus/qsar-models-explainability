@@ -18,11 +18,7 @@ from tuning_results import (
     cyp_gnn_params,
     herg_gnn_params,
     pampa_gnn_params,
-    synthetic_gnn_params,
-    cyp_catboost_params,
-    herg_catboost_params,
-    pampa_catboost_params,
-    synthetic_catboost_params
+    synthetic_gnn_params
 )
 
 
