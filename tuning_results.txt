@@ -1,0 +1,4 @@
+Synthetic dataset: 
+{'hidden_size': 170, 'num_layers': 1, 'dropout': 0.26063824164160737, 'lr': 0.004279768708209355}
+Synthetic dataset: 
+{'lr': 0.06064536978406754, 'max_depth': 6, 'l2_leaf_reg': 9.107190098674344}
